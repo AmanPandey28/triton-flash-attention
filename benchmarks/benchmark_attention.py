@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Any
 
 import torch
-
 import triton
+
 from triton_flash_attention import scaled_dot_product_attention
 
 

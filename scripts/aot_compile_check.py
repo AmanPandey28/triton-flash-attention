@@ -14,10 +14,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+import triton  # noqa: E402
 from triton.backends.compiler import GPUTarget  # noqa: E402
 from triton.compiler import ASTSource, make_backend  # noqa: E402
 
-import triton  # noqa: E402
 import triton_flash_attention.attention as attention  # noqa: E402
 
 

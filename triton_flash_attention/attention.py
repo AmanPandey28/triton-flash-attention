@@ -14,9 +14,8 @@ from numbers import Real
 from typing import Literal
 
 import torch
-import triton.language as tl
-
 import triton
+import triton.language as tl
 
 _INV_LN2 = tl.constexpr(1.4426950408889634)
 _SUPPORTED_HEAD_DIMS = (32, 64, 128)
