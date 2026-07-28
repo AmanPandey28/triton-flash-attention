@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  quality:
+  validation:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -17,15 +17,15 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install CPU test dependencies
+      - name: Install validation toolchain
         run: |
           python -m pip install --upgrade pip
-          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install "torch>=2.4,<3" --index-url https://download.pytorch.org/whl/cpu
           python -m pip install "triton>=3,<4" "pytest>=8" "ruff==0.16.0"
           python -m pip install -e . --no-deps
-      - name: Lint
+      - name: Static analysis
         run: python -m ruff check --no-cache --output-format=github .
-      - name: Test CPU contracts
-        run: pytest -m "not cuda"
-      - name: AOT compile representative CUDA kernels
+      - name: API and analytical contract tests
+        run: python -m pytest tests/test_api.py tests/test_benchmark_model.py
+      - name: AOT compile CUDA kernels (sm_80)
         run: python scripts/aot_compile_check.py --arch 80

@@ -11,7 +11,7 @@ from triton_flash_attention import (
 
 
 @pytest.mark.parametrize("causal", [False, True])
-def test_cpu_auto_fallback_matches_torch(causal: bool) -> None:
+def test_auto_dispatch_fallback_matches_reference(causal: bool) -> None:
     torch.manual_seed(0)
     query = torch.randn(2, 4, 7, 32, requires_grad=True)
     key = torch.randn(2, 4, 7, 32, requires_grad=True)
@@ -30,7 +30,7 @@ def test_cpu_auto_fallback_matches_torch(causal: bool) -> None:
         torch.testing.assert_close(actual_grad, expected_grad)
 
 
-def test_cpu_gqa_fallback_matches_torch() -> None:
+def test_gqa_fallback_matches_reference() -> None:
     torch.manual_seed(1)
     query = torch.randn(1, 4, 11, 32)
     key = torch.randn(1, 2, 11, 32)
@@ -44,7 +44,7 @@ def test_cpu_gqa_fallback_matches_torch() -> None:
     torch.testing.assert_close(actual, expected)
 
 
-def test_dispatch_explains_cpu_fallback() -> None:
+def test_dispatch_explains_ineligible_device() -> None:
     tensor = torch.randn(1, 1, 3, 32)
     assert explain_dispatch(tensor, tensor, tensor) == DispatchDecision(
         backend="torch",
@@ -52,7 +52,7 @@ def test_dispatch_explains_cpu_fallback() -> None:
     )
 
 
-def test_forced_triton_reports_unsupported_input() -> None:
+def test_strict_triton_backend_rejects_ineligible_device() -> None:
     tensor = torch.randn(1, 1, 3, 32)
     with pytest.raises(RuntimeError, match="requires a CUDA tensor"):
         scaled_dot_product_attention(tensor, tensor, tensor, backend="triton")
@@ -84,7 +84,7 @@ def test_validation_errors(mutator, message: str) -> None:
         scaled_dot_product_attention(query, key, value)
 
 
-def test_custom_scale_on_torch_backend() -> None:
+def test_explicit_torch_backend_honors_custom_scale() -> None:
     query = torch.randn(1, 2, 5, 32)
     key = torch.randn_like(query)
     value = torch.randn_like(query)
@@ -97,7 +97,7 @@ def test_custom_scale_on_torch_backend() -> None:
     torch.testing.assert_close(actual, expected)
 
 
-def test_cross_attention_uses_torch_fallback() -> None:
+def test_cross_attention_fallback_matches_reference() -> None:
     query = torch.randn(1, 2, 3, 32)
     key = torch.randn(1, 2, 5, 32)
     value = torch.randn(1, 2, 5, 16)

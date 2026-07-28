@@ -87,8 +87,9 @@ reason.
 | Heads | MHA and GQA |
 | Autograd | Forward and backward |
 
-CPU tensors, unsupported dtypes and head dimensions, cross-attention, and
-unequal value dimensions are handled by the PyTorch fallback in automatic mode.
+Inputs outside the CUDA kernel's support envelope—including non-CUDA tensors,
+unsupported dtypes and head dimensions, cross-attention, and unequal value
+dimensions—are handled by the PyTorch fallback in automatic mode.
 Dropout and arbitrary attention masks are not currently implemented.
 
 ## Algorithm
@@ -110,16 +111,25 @@ layout.
 ## Correctness
 
 ```bash
-pytest
-ruff check .
+python -m pytest tests/test_cuda_correctness.py
+python -m pytest tests/test_api.py tests/test_benchmark_model.py
 python scripts/aot_compile_check.py --arch 80
+python -m ruff check .
 ```
 
-The test suite contains 13 API and performance-model tests plus 9 CUDA
-differential tests. All 22 tests pass on an NVIDIA GeForce RTX 5050 Laptop GPU.
-The CUDA cases compare the output, `dQ`, `dK`, and `dV` with PyTorch across
-causal and bidirectional modes, non-aligned sequence lengths, multiple head
-dimensions, and GQA.
+Validation is split by responsibility, following the same pattern used for
+production accelerator libraries:
+
+- CUDA differential tests compare the output, `dQ`, `dK`, and `dV` with
+  PyTorch across causal and bidirectional modes, non-aligned sequence lengths,
+  multiple head dimensions, and GQA.
+- Hardware-independent contract tests cover dispatch, input validation,
+  fallback semantics, autograd integration, and analytical performance models.
+- Driver-independent AOT checks compile representative forward and backward
+  kernels for a declared CUDA architecture.
+
+The suite contains 9 CUDA differential tests and 13 API and analytical tests.
+All 22 tests pass on an NVIDIA GeForce RTX 5050 Laptop GPU.
 
 ## Benchmarking
 
