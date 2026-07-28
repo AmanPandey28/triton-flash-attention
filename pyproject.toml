@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "triton-flash-attention"
+version = "0.2.0"
+description = "Fused FlashAttention-2 forward and backward kernels in Triton"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.4,<3",
+    "triton>=3.0,<4",
+]
+
+[project.urls]
+Repository = "https://github.com/AmanPandey28/triton-flash-attention"
+Issues = "https://github.com/AmanPandey28/triton-flash-attention/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.9",
+]
+
+[tool.setuptools.packages.find]
+include = ["triton_flash_attention*"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "cuda: requires an NVIDIA CUDA GPU",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
