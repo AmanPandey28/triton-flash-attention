@@ -20,7 +20,7 @@ Issues = "https://github.com/AmanPandey28/triton-flash-attention/issues"
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
-    "ruff>=0.9",
+    "ruff==0.16.0",
 ]
 
 [tool.setuptools.packages.find]
