@@ -81,13 +81,33 @@ def _attn_fwd_inner(
 
 _FWD_CONFIGS = [
     triton.Config({"BLOCK_M": 64, "BLOCK_N": 32}, num_stages=3, num_warps=4),
-    triton.Config({"BLOCK_M": 64, "BLOCK_N": 32}, num_stages=4, num_warps=4),
+    triton.Config({"BLOCK_M": 64, "BLOCK_N": 64}, num_stages=3, num_warps=4),
     triton.Config({"BLOCK_M": 128, "BLOCK_N": 32}, num_stages=3, num_warps=4),
-    triton.Config({"BLOCK_M": 128, "BLOCK_N": 32}, num_stages=4, num_warps=8),
+    triton.Config({"BLOCK_M": 128, "BLOCK_N": 64}, num_stages=3, num_warps=4),
 ]
 
 
-@triton.autotune(configs=_FWD_CONFIGS, key=["N_CTX", "HEAD_DIM", "CAUSAL"])
+def _prune_fwd_configs(configs, _named_args, **kwargs):
+    """Discard tile shapes that cannot be valid for this specialization."""
+    head_dim = kwargs["HEAD_DIM"]
+    causal = kwargs["CAUSAL"]
+    return [
+        config
+        for config in configs
+        if config.kwargs["BLOCK_N"] <= head_dim
+        and (
+            not causal
+            or config.kwargs["BLOCK_M"] >= config.kwargs["BLOCK_N"]
+        )
+    ]
+
+
+@triton.autotune(
+    configs=_FWD_CONFIGS,
+    key=["N_CTX", "HEAD_DIM", "CAUSAL"],
+    prune_configs_by={"early_config_prune": _prune_fwd_configs},
+    cache_results=True,
+)
 @triton.jit
 def _attn_fwd(
     Q,
@@ -378,6 +398,7 @@ _BWD_CONFIGS = [
     configs=_BWD_CONFIGS,
     key=["N_CTX", "HEAD_DIM", "CAUSAL"],
     reset_to_zero=["dK_ptr", "dV_ptr"],
+    cache_results=True,
 )
 @triton.jit
 def _attn_bwd(

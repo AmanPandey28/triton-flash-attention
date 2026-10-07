@@ -1,0 +1,21 @@
+{
+  "timestamp_utc": "2026-10-06T22:30:29.973615+00:00",
+  "gpu": "NVIDIA GeForce RTX 5050 Laptop GPU",
+  "compute_capability": "12.0",
+  "torch": "2.12.0+cu130",
+  "triton": "3.7.0",
+  "python": "3.12.12",
+  "cuda_runtime": "13.0",
+  "torch_sdpa_backend": "FLASH_ATTENTION",
+  "dtype": "float16",
+  "seed": 1729,
+  "warmup_ms": 500,
+  "measurement_ms": 1000,
+  "command": "python -m benchmarks.benchmark_attention --sequence-lengths 128,511,512,1025,2048,4096 --head-dims 64,128 --batch 1 --query-heads 16 --mode forward-backward --mask both --warmup-ms 500 --rep-ms 1000 --seed 1729 --output benchmarks/results/rtx5050_mha.csv",
+  "driver_version": "595.91.07",
+  "pstate": "P0",
+  "power_draw_w": "34.08",
+  "power_limit_w": "[N/A]",
+  "sm_clock_mhz": "2287",
+  "memory_clock_mhz": "12001"
+}

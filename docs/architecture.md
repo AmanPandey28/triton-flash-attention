@@ -153,14 +153,15 @@ The benchmark exposes `--kv-heads` so that this decision can be measured.
 
 ## Autotuning
 
-Forward tunes query tile size, pipeline stages, and warp count. Backward tunes
-macro/micro tile sizes plus stages and warps. The cache key includes sequence
-length, head dimension, and causality.
+Forward tunes query and K/V tile sizes and prunes tiles that exceed the head
+dimension. Backward tunes macro/micro tile sizes plus stages and warps. The
+cache key includes sequence length, head dimension, and causality, and tuning
+results are persisted across processes.
 
 Autotuning has a first-call cost, so benchmarks warm the kernel before measuring
 steady state. GQA backward also declares `dK` and `dV` as reset-to-zero buffers
-during tuning; without that, repeated candidate runs would accumulate gradients
-and corrupt the result.
+during tuning; without that, repeated configuration trials would accumulate
+gradients and corrupt the result.
 
 ## Complexity and limitations
 

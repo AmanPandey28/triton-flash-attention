@@ -1,0 +1,26 @@
+{
+  "timestamp_utc": "2026-10-06T22:34:00+00:00",
+  "gpu": "NVIDIA GeForce RTX 5050 Laptop GPU",
+  "compute_capability": "12.0",
+  "nsight_compute": "2025.4.1.0",
+  "torch": "2.12.0+cu130",
+  "triton": "3.7.0",
+  "cuda_runtime": "13.0",
+  "dtype": "float16",
+  "provider": "triton",
+  "mode": "forward-only",
+  "mask": "causal",
+  "batch": 1,
+  "query_heads": 16,
+  "kv_heads": 16,
+  "seed": 1729,
+  "capture": "one warmed iteration; kernel filter regex:_attn_fwd",
+  "sections": [
+    "SpeedOfLight",
+    "LaunchStats",
+    "Occupancy",
+    "ComputeWorkloadAnalysis",
+    "MemoryWorkloadAnalysis",
+    "WarpStateStats"
+  ]
+}

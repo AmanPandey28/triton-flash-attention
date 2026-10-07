@@ -17,3 +17,7 @@ dist/
 .mypy_cache/
 .coverage
 htmlcov/
+
+# Local editor and scratch files
+.vscode/
+triton_flash_attention/run.py

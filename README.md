@@ -112,6 +112,8 @@ layout.
 
 ```bash
 python -m pytest tests/test_cuda_correctness.py
+python -m benchmarks.correctness \
+  --output benchmarks/results/rtx5050_correctness.json
 python -m pytest tests/test_api.py tests/test_benchmark_model.py
 python scripts/aot_compile_check.py --arch 80
 python -m ruff check .
@@ -128,52 +130,82 @@ production accelerator libraries:
 - Driver-independent AOT checks compile representative forward and backward
   kernels for a declared CUDA architecture.
 
-The suite contains 9 CUDA differential tests and 13 API and analytical tests.
-All 22 tests pass on an NVIDIA GeForce RTX 5050 Laptop GPU.
+The matrix contains 20 CUDA differential cases spanning batch sizes 1/2/4,
+head dimensions 32/64/128, causal and bidirectional MHA, tile-boundary tails,
+and 2:1/4:1/8:1 GQA. It records maximum absolute and relative error for the
+output, `dQ`, `dK`, and `dV`; all 20 cases pass on an NVIDIA GeForce RTX 5050
+Laptop GPU. The repository also has 13 API and analytical tests.
 
 ## Benchmarking
 
 ```bash
 python -m benchmarks.benchmark_attention \
-  --sequence-lengths 512,1024,2048,4096 \
+  --sequence-lengths 128,511,512,1025,2048,4096 \
   --head-dims 64,128 \
-  --batch 4 \
+  --batch 1 \
   --query-heads 16 \
   --mode forward-backward \
-  --mask causal \
-  --output benchmarks/results/rtx5050.csv
+  --mask both \
+  --warmup-ms 500 \
+  --rep-ms 1000 \
+  --output benchmarks/results/rtx5050_mha.csv
 ```
 
-The benchmark reports median, p20, and p80 latency plus algorithmic TFLOP/s. It
-writes a CSV and a metadata JSON containing the GPU, compute capability, CUDA,
-PyTorch, Triton, and Python versions.
+The benchmark reports p10/p50/p90 latency, cold first-call cost, algorithmic
+TFLOP/s, and speedup relative to PyTorch. It identifies the selected PyTorch
+SDPA backend with a CUDA profiler trace and writes raw CSV, a concise Markdown
+summary, and environment metadata including the seed, command, driver, clocks,
+and power state.
 
 ### RTX 5050 Laptop GPU
 
-`B=4`, `H=16`, `N=4096`, `D=64`, causal forward and backward, 1-second warmup,
-3-second measurement window:
+Against the profiler-confirmed PyTorch `FLASH_ATTENTION` backend, the custom
+forward+backward path is faster on 11/24 MHA shapes and 9/16 4:1 GQA shapes.
+The best MHA result is **1.38x** at `B=1, H=16, N=512, D=64`, causal. The best
+GQA result is **2.09x** at `B=1, Hq/Hkv=16/4, N=128, D=64`, causal. Long
+sequences and several `D=128` shapes remain slower; the complete crossover is
+reported instead of only the winning cases.
 
-| Provider | Median | p20–p80 | TFLOP/s |
-| --- | ---: | ---: | ---: |
-| PyTorch SDPA | 30.50 ms | 28.54–33.86 ms | 15.776 |
-| Triton FlashAttention-2 | 36.22 ms | 34.75–37.87 ms | 13.283 |
+See [the performance study](docs/performance.md), the
+[MHA sweep](benchmarks/results/rtx5050_mha.summary.md), and the
+[GQA sweep](benchmarks/results/rtx5050_gqa.summary.md) for raw-data links,
+methodology, Nsight Compute evidence, and optimization decisions.
 
-Raw measurements and environment details are available in
-[benchmarks/results/rtx5050.csv](benchmarks/results/rtx5050.csv) and
-[benchmarks/results/rtx5050.metadata.json](benchmarks/results/rtx5050.metadata.json).
+## Profiling
+
+`scripts/profile_attention.py` emits one warmed iteration inside a CUDA
+profiler capture range. For example:
+
+```bash
+ncu --profile-from-start off \
+  --section SpeedOfLight --section LaunchStats --section Occupancy \
+  --section ComputeWorkloadAnalysis --section MemoryWorkloadAnalysis \
+  python -m scripts.profile_attention \
+  --sequence 512 --head-dim 64 --causal --forward-only
+```
+
+Recorded profiles show the `D=128` forward specialization using 255
+registers/thread and 64–96 KiB shared memory, reducing achieved occupancy to
+8.3%. This explains the measured long-sequence crossover and identifies
+resource pressure—not DRAM bandwidth—as the next tuning target.
 
 ## Repository structure
 
 ```text
 triton_flash_attention/             Python package and Triton kernels
 benchmarks/benchmark_attention.py   Reproducible benchmark CLI
+benchmarks/correctness.py           Deterministic CUDA correctness matrix
 benchmarks/results/                 Recorded benchmark data
 tests/                              API, model, and CUDA differential tests
 scripts/aot_compile_check.py        Driver-independent CUDA compilation check
+scripts/profile_attention.py        Nsight Compute capture workload
 docs/architecture.md                Algorithm and implementation details
+docs/performance.md                 Benchmark and profiler findings
 ```
 
 ## Acknowledgements
 
 This implementation builds on Triton's official fused-attention tutorial and
-the projects listed in [NOTICE.md](NOTICE.md).
+the projects listed in [NOTICE.md](NOTICE.md). The boundary between upstream
+ideas and repository-specific work is documented in
+[PROVENANCE.md](PROVENANCE.md).
